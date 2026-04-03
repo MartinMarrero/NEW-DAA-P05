@@ -16,7 +16,7 @@
 
 class FacilityManager {
   public:
-
+    std::vector<Facility> getFacilities() { return facilities_; }
   private:
     std::vector<Facility> facilities_; // (M)
 };
