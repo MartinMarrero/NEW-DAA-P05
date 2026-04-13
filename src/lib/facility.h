@@ -15,9 +15,11 @@ class Facility {
   public:
     int getOpeningCost() { return opening_cost_; }
     int getMaxCapacity() { return max_capacity_; }
+    int getStatus()      { return status_;       }
   private:
     int opening_cost_; // (F)
     int max_capacity_; // (S)
+    bool status_;      // tells wether the facility is open or not
 };
 
 
