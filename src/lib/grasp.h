@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 #include "client_swap_search.h"
 #include "incompatibility_search.h"
@@ -17,7 +18,8 @@
 /**
  * GRASP constructive solver for the MS-CFLP-CI problem.
  * Implements a randomized greedy construction phase using
- * a Restricted Candidate List (RCL) approach.
+ * a Restricted Candidate List (RCL) approach, followed by
+ * Random Variable Neighborhood Descent (RVND).
  */
 class GraspSolver : public Solver {
  public:
@@ -37,7 +39,7 @@ class GraspSolver : public Solver {
   ~GraspSolver() override;
 
   /**
-   * Solves the instance using the GRASP constructive phase.
+    * Solves the instance using GRASP construction + RVND improvement.
    * @param instance The problem instance to solve.
    * @return A feasible Solution.
    */

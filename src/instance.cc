@@ -1,7 +1,7 @@
 #include "lib/instance.h"
 
+#include <cctype>
 #include <fstream>
-#include <regex>
 #include <sstream>
 #include <stdexcept>
 
@@ -24,19 +24,47 @@ std::string ReadFile(const std::string& file_name) {
 }
 
 /**
+ * Trims leading/trailing whitespace.
+ * @param text Input text.
+ * @return Trimmed text view as string.
+ */
+std::string Trim(const std::string& text) {
+  std::size_t begin = 0;
+  while (begin < text.size() && std::isspace(static_cast<unsigned char>(text[begin]))) {
+    ++begin;
+  }
+
+  std::size_t end = text.size();
+  while (end > begin && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
+    --end;
+  }
+
+  return text.substr(begin, end - begin);
+}
+
+/**
  * Extracts the right-hand side of a named MiniZinc assignment.
  * @param text Source text.
  * @param key Assignment name.
  * @return Raw assigned expression.
  */
 std::string ExtractAssignment(const std::string& text, const std::string& key) {
-  const std::regex pattern(key + R"(\s*=\s*([^;]+);)");
-  std::smatch match;
-  if (!std::regex_search(text, match, pattern)) {
+  const std::size_t key_position = text.find(key);
+  if (key_position == std::string::npos) {
     throw std::runtime_error("Missing field: " + key);
   }
 
-  return match[1].str();
+  const std::size_t equal_position = text.find('=', key_position + key.size());
+  if (equal_position == std::string::npos) {
+    throw std::runtime_error("Malformed assignment (missing '=') for field: " + key);
+  }
+
+  const std::size_t semicolon_position = text.find(';', equal_position + 1);
+  if (semicolon_position == std::string::npos) {
+    throw std::runtime_error("Malformed assignment (missing ';') for field: " + key);
+  }
+
+  return Trim(text.substr(equal_position + 1, semicolon_position - (equal_position + 1)));
 }
 
 /**
@@ -57,12 +85,36 @@ int ExtractScalar(const std::string& text, const std::string& key) {
  */
 std::vector<int> ParseIntegerList(const std::string& raw_value) {
   std::vector<int> values;
-  const std::regex number_pattern(R"(-?\d+)");
-  auto begin = std::sregex_iterator(raw_value.begin(), raw_value.end(), number_pattern);
-  auto end = std::sregex_iterator();
 
-  for (auto it = begin; it != end; ++it) {
-    values.push_back(std::stoi(it->str()));
+  std::size_t index = 0;
+  while (index < raw_value.size()) {
+    while (index < raw_value.size() && raw_value[index] != '-' &&
+           !std::isdigit(static_cast<unsigned char>(raw_value[index]))) {
+      ++index;
+    }
+
+    if (index >= raw_value.size()) {
+      break;
+    }
+
+    int sign = 1;
+    if (raw_value[index] == '-') {
+      sign = -1;
+      ++index;
+      if (index >= raw_value.size() ||
+          !std::isdigit(static_cast<unsigned char>(raw_value[index]))) {
+        continue;
+      }
+    }
+
+    int value = 0;
+    while (index < raw_value.size() &&
+           std::isdigit(static_cast<unsigned char>(raw_value[index]))) {
+      value = value * 10 + (raw_value[index] - '0');
+      ++index;
+    }
+
+    values.push_back(sign * value);
   }
 
   return values;

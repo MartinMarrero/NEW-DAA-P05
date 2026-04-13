@@ -79,6 +79,40 @@ std::vector<std::unique_ptr<LocalSearch>> CreateDefaultLocalSearches() {
 }
 
 /**
+ * Applies Random Variable Neighborhood Descent (RVND) over a neighborhood list.
+ * At each step, a random active neighborhood is selected. If it improves the
+ * solution, the active list is reset; otherwise that neighborhood is removed.
+ * @param instance Problem instance.
+ * @param neighborhoods Neighborhood structures.
+ * @param rng Random generator used for neighborhood selection.
+ * @param solution Solution to improve in place.
+ */
+void ApplyRvnd(const Instance& instance,
+               const std::vector<std::unique_ptr<LocalSearch>>& neighborhoods,
+               std::mt19937& rng,
+               Solution& solution) {
+  if (neighborhoods.empty()) {
+    return;
+  }
+
+  std::vector<int> active_neighborhoods(neighborhoods.size());
+  std::iota(active_neighborhoods.begin(), active_neighborhoods.end(), 0);
+
+  while (!active_neighborhoods.empty()) {
+    std::uniform_int_distribution<int> pick(
+        0, static_cast<int>(active_neighborhoods.size()) - 1);
+    const int active_position = pick(rng);
+    const int neighborhood_index = active_neighborhoods[active_position];
+
+    if (neighborhoods[neighborhood_index]->improve(instance, solution)) {
+      std::iota(active_neighborhoods.begin(), active_neighborhoods.end(), 0);
+    } else {
+      active_neighborhoods.erase(active_neighborhoods.begin() + active_position);
+    }
+  }
+}
+
+/**
  * Constructs a GRASP solver with optional local-search phases.
  * @param slack_facilities Number of extra facilities to open for slack.
  * @param rcl_size Restricted Candidate List size.
@@ -175,16 +209,8 @@ Solution BuildGraspConstructiveSolution(const Instance& instance,
  */
 Solution GraspSolver::solve(const Instance& instance) {
   Solution solution = BuildGraspConstructiveSolution(instance, slack_facilities_, rcl_size_, seed_);
-
-  bool improved = false;
-  do {
-    improved = false;
-    for (const auto& local_search : local_searches_) {
-      if (local_search->improve(instance, solution)) {
-        improved = true;
-      }
-    }
-  } while (improved);
+  std::mt19937 rng(seed_);
+  ApplyRvnd(instance, local_searches_, rng, solution);
 
   return solution;
 }

@@ -47,6 +47,7 @@ bool IncompatibilityEliminationLocalSearch::improve(const Instance& instance,
 
     const std::vector<int> open_facilities = LocalSearch::GetOpenFacilities(solution);
     const std::vector<std::vector<int>>& assignments = solution.getAssignmentQuantity();
+    const std::vector<int>& remaining_capacity = solution.getRemainingCapacity();
 
     int target_facility = -1;
     int max_facility_transport = -1;
@@ -94,8 +95,11 @@ bool IncompatibilityEliminationLocalSearch::improve(const Instance& instance,
           continue;
         }
 
-        const int transferable =
-            std::min(assigned_quantity, solution.getMaxFeasibleQuantity(store, destination));
+        if (!solution.isCompatibleWithFacility(store, destination)) {
+          continue;
+        }
+
+        const int transferable = std::min(assigned_quantity, remaining_capacity[destination]);
         if (transferable <= 0) {
           continue;
         }
@@ -119,7 +123,11 @@ bool IncompatibilityEliminationLocalSearch::improve(const Instance& instance,
       break;
     }
 
+    const int old_total_cost = solution.getTotalCost();
     solution.moveQuantity(best_store, best_source, best_destination, best_quantity);
+    if (solution.getTotalCost() >= old_total_cost) {
+      break;
+    }
     improved = true;
   }
 
