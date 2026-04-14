@@ -28,11 +28,13 @@ class GraspSolver : public Solver {
    * @param slack_facilities Number of extra facilities to open for slack.
    * @param rcl_size Size of the Restricted Candidate List.
    * @param seed Random seed for reproducibility.
+   * @param iterations Number of GRASP multi-start iterations.
    * @param local_searches Optional local-search phases to run after construction.
    */
   GraspSolver(int slack_facilities = 5,
               int rcl_size = 3,
               std::uint32_t seed = 5489u,
+              int iterations = 1,
               std::vector<std::unique_ptr<LocalSearch>> local_searches = {});
 
   /** Destroys the solver and releases owned local-search phases. */
@@ -55,6 +57,7 @@ class GraspSolver : public Solver {
   int slack_facilities_;
   int rcl_size_;
   std::uint32_t seed_;
+  int iterations_;
   std::vector<std::unique_ptr<LocalSearch>> local_searches_;
 };
 

@@ -122,10 +122,12 @@ void ApplyRvnd(const Instance& instance,
 GraspSolver::GraspSolver(int slack_facilities,
                          int rcl_size,
                          std::uint32_t seed,
+                         int iterations,
                          std::vector<std::unique_ptr<LocalSearch>> local_searches)
     : slack_facilities_(slack_facilities),
       rcl_size_(rcl_size),
       seed_(seed),
+      iterations_(iterations),
       local_searches_(local_searches.empty() ? CreateDefaultLocalSearches()
                                              : std::move(local_searches)) {}
 
@@ -208,9 +210,27 @@ Solution BuildGraspConstructiveSolution(const Instance& instance,
  * @return A feasible improved solution.
  */
 Solution GraspSolver::solve(const Instance& instance) {
-  Solution solution = BuildGraspConstructiveSolution(instance, slack_facilities_, rcl_size_, seed_);
-  std::mt19937 rng(seed_);
-  ApplyRvnd(instance, local_searches_, rng, solution);
+  if (iterations_ <= 0) {
+    throw std::runtime_error("GRASP iterations must be strictly positive");
+  }
 
-  return solution;
+  // First iteration initializes the best solution.
+  Solution best_solution =
+      BuildGraspConstructiveSolution(instance, slack_facilities_, rcl_size_, seed_);
+  std::mt19937 best_rng(seed_);
+  ApplyRvnd(instance, local_searches_, best_rng, best_solution);
+
+  for (int iteration = 1; iteration < iterations_; ++iteration) {
+    const std::uint32_t iteration_seed = seed_ + static_cast<std::uint32_t>(iteration);
+    Solution current_solution =
+        BuildGraspConstructiveSolution(instance, slack_facilities_, rcl_size_, iteration_seed);
+    std::mt19937 current_rng(iteration_seed);
+    ApplyRvnd(instance, local_searches_, current_rng, current_solution);
+
+    if (current_solution.getTotalCost() < best_solution.getTotalCost()) {
+      best_solution = std::move(current_solution);
+    }
+  }
+
+  return best_solution;
 }

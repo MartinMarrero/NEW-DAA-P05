@@ -274,8 +274,9 @@ RunSummary RunGrasp(const Instance& instance,
                     const std::string& instance_id,
                     int slack_k,
                     int rcl_size,
-                    std::uint32_t seed) {
-  GraspSolver solver(slack_k, rcl_size, seed);
+                    std::uint32_t seed,
+                    int iterations) {
+  GraspSolver solver(slack_k, rcl_size, seed, iterations);
   Solution solution = solver.solve(instance);
   return SummarizeRun(solver.getName(), instance_id, solution);
 }
@@ -296,11 +297,11 @@ int main(int argc, char* argv[]) {
     std::cerr << "  " << argv[0]
               << " <instance.dzn> "
               << console_colors::Paint("grasp", console_colors::Color::kCyan)
-              << " [slack_k] [rcl_size] [seed]\n";
+              << " [slack_k] [rcl_size] [seed] [iterations]\n";
     std::cerr << "  " << argv[0]
               << " <instance.dzn> "
               << console_colors::Paint("both", console_colors::Color::kCyan)
-              << " [slack_k] [rcl_size] [seed]\n";
+              << " [slack_k] [rcl_size] [seed] [iterations]\n";
     return 1;
   }
 
@@ -337,7 +338,12 @@ int main(int argc, char* argv[]) {
         seed = static_cast<std::uint32_t>(std::stoul(argv[5]));
       }
 
-        grasp_summary = RunGrasp(instance, instance_id, slack_k, rcl_size, seed);
+      int iterations = 1;
+      if (argc >= 7) {
+        iterations = std::stoi(argv[6]);
+      }
+
+        grasp_summary = RunGrasp(instance, instance_id, slack_k, rcl_size, seed, iterations);
     } else if (algorithm == "both") {
       int slack_k = 5;
       if (argc >= 4) {
@@ -354,8 +360,13 @@ int main(int argc, char* argv[]) {
         seed = static_cast<std::uint32_t>(std::stoul(argv[5]));
       }
 
+      int iterations = 1;
+      if (argc >= 7) {
+        iterations = std::stoi(argv[6]);
+      }
+
         greedy_summary = RunGreedy(instance, instance_id, slack_k);
-        grasp_summary = RunGrasp(instance, instance_id, slack_k, rcl_size, seed);
+        grasp_summary = RunGrasp(instance, instance_id, slack_k, rcl_size, seed, iterations);
 
       PrintComparisonTable({greedy_summary, grasp_summary}, instance.getWarehouses());
       return 0;
