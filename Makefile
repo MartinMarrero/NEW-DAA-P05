@@ -11,6 +11,7 @@ SRCS := $(SRC_DIR)/main.cc \
 	$(SRC_DIR)/solution.cc \
 	$(SRC_DIR)/greedy.cc \
 	$(SRC_DIR)/grasp.cc \
+	$(SRC_DIR)/gvns.cc \
 	$(SRC_DIR)/local_search.cc \
 	$(SRC_DIR)/client_swap_search.cc \
 	$(SRC_DIR)/incompatibility_search.cc \

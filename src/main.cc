@@ -12,6 +12,7 @@
 #include "lib/console_colors.h"
 #include "lib/grasp.h"
 #include "lib/greedy.h"
+#include "lib/gvns.h"
 #include "lib/instance.h"
 #include "lib/solver.h"
 
@@ -281,6 +282,18 @@ RunSummary RunGrasp(const Instance& instance,
   return SummarizeRun(solver.getName(), instance_id, solution);
 }
 
+RunSummary RunGvns(const Instance& instance,
+                   const std::string& instance_id,
+                   int slack_k,
+                   int max_iterations,
+                   std::uint32_t seed,
+                   double epsilon = 0.2,
+                   double alpha = 0.2) {
+  GVNS solver(max_iterations, slack_k, seed, epsilon, alpha);
+  Solution solution = solver.solve(instance);
+  return SummarizeRun(solver.getName(), instance_id, solution);
+}
+
 /**
  * Program entry point.
  * @param argc Number of command-line arguments.
@@ -300,8 +313,12 @@ int main(int argc, char* argv[]) {
               << " [slack_k] [rcl_size] [seed] [iterations]\n";
     std::cerr << "  " << argv[0]
               << " <instance.dzn> "
-              << console_colors::Paint("both", console_colors::Color::kCyan)
-              << " [slack_k] [rcl_size] [seed] [iterations]\n";
+              << console_colors::Paint("gvns", console_colors::Color::kCyan)
+              << " [slack_k] [max_iterations] [seed]\n";
+    std::cerr << "  " << argv[0]
+          << " <instance.dzn> "
+          << console_colors::Paint("all", console_colors::Color::kCyan)
+          << " [slack_k] [rcl_size] [seed] [iterations]\n";
     return 1;
   }
 
@@ -322,6 +339,35 @@ int main(int argc, char* argv[]) {
         slack_k = std::stoi(argv[3]);
       }
         greedy_summary = RunGreedy(instance, instance_id, slack_k);
+    } else if (algorithm == "gvns") {
+      int slack_k = 5;
+      if (argc >= 4) {
+        slack_k = std::stoi(argv[3]);
+      }
+
+      int max_iterations = 100;
+      if (argc >= 5) {
+        max_iterations = std::stoi(argv[4]);
+      }
+
+      std::uint32_t seed = 5489u;
+      if (argc >= 6) {
+        seed = static_cast<std::uint32_t>(std::stoul(argv[5]));
+      }
+
+      double epsilon = 0.2;
+      if (argc >= 7) {
+        epsilon = std::stod(argv[6]);
+      }
+
+      double alpha = 0.2;
+      if (argc >= 8) {
+        alpha = std::stod(argv[7]);
+      }
+
+      RunSummary gvns_summary = RunGvns(instance, instance_id, slack_k, max_iterations, seed, epsilon, alpha);
+      PrintSingleRun(gvns_summary);
+      return 0;
     } else if (algorithm == "grasp") {
       int slack_k = 5;
       if (argc >= 4) {
@@ -344,7 +390,7 @@ int main(int argc, char* argv[]) {
       }
 
         grasp_summary = RunGrasp(instance, instance_id, slack_k, rcl_size, seed, iterations);
-    } else if (algorithm == "both") {
+    } else if (algorithm == "all") {
       int slack_k = 5;
       if (argc >= 4) {
         slack_k = std::stoi(argv[3]);
@@ -364,14 +410,18 @@ int main(int argc, char* argv[]) {
       if (argc >= 7) {
         iterations = std::stoi(argv[6]);
       }
+      // Use a stronger GVNS budget in comparison mode so the table reflects
+      // the actual optimized variant rather than a one-iteration placeholder.
+      const int gvns_iterations = 500;
+      RunSummary gvns_summary = RunGvns(instance, instance_id, slack_k, gvns_iterations, seed);
 
         greedy_summary = RunGreedy(instance, instance_id, slack_k);
         grasp_summary = RunGrasp(instance, instance_id, slack_k, rcl_size, seed, iterations);
 
-      PrintComparisonTable({greedy_summary, grasp_summary}, instance.getWarehouses());
+      PrintComparisonTable({greedy_summary, grasp_summary, gvns_summary}, instance.getWarehouses());
       return 0;
     } else {
-      throw std::runtime_error("Unknown algorithm. Use 'greedy', 'grasp', or 'both'");
+      throw std::runtime_error("Unknown algorithm. Use 'greedy', 'grasp', 'gvns', or 'all'");
     }
 
     if (algorithm == "greedy") {

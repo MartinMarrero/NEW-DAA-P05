@@ -1,0 +1,4 @@
+instance,alpha,epsilon,total_cost,error_pct
+wlp01,0.1,0.1,32637,13.65
+wlp01,0.2,0.2,32615,13.58
+wlp01,0.3,0.1,32637,13.65
